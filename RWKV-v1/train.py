@@ -32,13 +32,13 @@ datafile_encoding = 'utf-8'
 # datafile = u"V:\\NLP\\simplebooks-shift-utf32.word"
 # datafile_encoding = 'utf-32'
 
-datafile_type = 0 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
+datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
 
 #################################### VERY IMPORTANT ####################################
 epoch_save_frequency = 10                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
-batch_size = 32                                      # if you see "CUDA out of memory", reduce this.
+batch_size = 48                                      # if you see "CUDA out of memory", reduce this.
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
@@ -47,7 +47,7 @@ n_epoch = 100                                        # the 'epoch' here is actua
 
 model_level = 'character' # 'character' (recommended) or 'word'
 
-ctx_len = 256 # context length, try 512 or 1024 if you have good GPU
+ctx_len = 512 # context length, try 512 or 1024 if you have good GPU
 n_layer = 6   # try 12 for 100M, 24 for 300M
 n_head = 8    # try 12 for 100M, 16 for 300M
 
@@ -129,7 +129,7 @@ model = GPT(GPTConfig(train_dataset.vocab_size, train_dataset.ctx_len, model_typ
                 n_layer=n_layer, n_head=n_head, n_embd=n_embd, n_attn=n_attn, n_ffn=n_ffn))
 
 # load a trained model
-# model.load_state_dict(torch.load('trained-xxx.pth').state_dict())
+model.load_state_dict(torch.load('trained-91.pth').state_dict())
 
 print('model', model_type, 'epoch', n_epoch, 'batchsz', batch_size, 'betas', betas, 'eps', eps, 'wd', weight_decay, 'ctx', ctx_len, 'layer', n_layer, 'head', n_head, 'embd', n_embd, 'attn', n_attn, 'ffn', n_ffn)
 tconf = TrainerConfig(model_type=model_type, max_epochs=n_epoch, batch_size=batch_size, weight_decay=weight_decay,
