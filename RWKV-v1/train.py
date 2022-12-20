@@ -22,7 +22,7 @@ model_type = 'RWKV'
 
 # datafile = u"V:\\NLP\\text8"
 # datafile = u"V:\\NLP\\enwik8"
-datafile = u"../data.txt"
+datafile = u" /kaggle/input/novel-small/dataI.txt"
 datafile_encoding = 'utf-8'
 # datafile = u"D:\\NLP-Data\\ww100M.txt"
 # datafile = u"D:\\NLP-Data\\__2019.txt"
