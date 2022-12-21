@@ -32,7 +32,7 @@ datafile_encoding = 'utf-8'
 # datafile = u"V:\\NLP\\simplebooks-shift-utf32.word"
 # datafile_encoding = 'utf-32'
 
-datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
+datafile_type = 0 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
 
 #################################### VERY IMPORTANT ####################################
 epoch_save_frequency = 10                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
@@ -42,7 +42,7 @@ batch_size = 32                                      # if you see "CUDA out of m
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
-n_epoch = 100                                        # the 'epoch' here is actually very short (and of fixed length)
+n_epoch = 128                                        # the 'epoch' here is actually very short (and of fixed length)
 ########################################################################################
 
 model_level = 'character' # 'character' (recommended) or 'word'
@@ -62,7 +62,7 @@ betas = (0.9, 0.99) if model_type == 'RWKV' else (0.9, 0.99)
 eps = 4e-9
 weight_decay = 0 if model_type == 'RWKV' else 0.01  # wd is not useful when we have enough data
 
-epoch_length_fixed = 1000                     # make an 'epoch' very short, so we can see the training progress
+epoch_length_fixed = 10000                     # make an 'epoch' very short, so we can see the training progress
 
 ######## special hyperparameters for RWKV model ########
 rwkv_emb_scale = 0.4                                # scale of initial embedding. 0.4 is a good choice
