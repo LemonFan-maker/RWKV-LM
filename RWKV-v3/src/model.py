@@ -21,8 +21,8 @@ print(f'\nRWKV_K_CLAMP {RWKV_K_CLAMP} RWKV_K_EPS {RWKV_K_EPS} RWKV_HEAD_QK_DIM {
 ########################################################################################################
 
 T_MAX = 1024          # increase this if your ctx_len > 1024
-B_GROUP_FORWARD = 4   # set to 8 for best performance
-B_GROUP_BACKWARD = 2  # set to 2 for best performance (sometimes 8 is faster)
+B_GROUP_FORWARD = 8   # set to 8 for best performance
+B_GROUP_BACKWARD = 8  # set to 2 for best performance (sometimes 8 is faster)
 
 timex_cuda = load(name="timex", sources=["cuda/timex_op.cpp", "cuda/timex_cuda.cu"],
                   verbose=True, extra_cuda_cflags=['--use_fast_math', '--extra-device-vectorization', f'-DTmax={T_MAX}', f'-DBF={B_GROUP_FORWARD}', f'-DBB={B_GROUP_BACKWARD}'])
