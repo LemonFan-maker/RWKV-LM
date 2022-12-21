@@ -42,7 +42,7 @@ batch_size = 32                                      # if you see "CUDA out of m
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
-n_epoch = 128                                        # the 'epoch' here is actually very short (and of fixed length)
+n_epoch = 100                                        # the 'epoch' here is actually very short (and of fixed length)
 ########################################################################################
 
 model_level = 'character' # 'character' (recommended) or 'word'
