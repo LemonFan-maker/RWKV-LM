@@ -42,7 +42,7 @@ batch_size = 48                                      # if you see "CUDA out of m
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
-n_epoch = 100                                        # the 'epoch' here is actually very short (and of fixed length)
+n_epoch = 5                                        # the 'epoch' here is actually very short (and of fixed length)
 ########################################################################################
 
 model_level = 'character' # 'character' (recommended) or 'word'
@@ -62,7 +62,7 @@ betas = (0.9, 0.99) if model_type == 'RWKV' else (0.9, 0.99)
 eps = 4e-9
 weight_decay = 0 if model_type == 'RWKV' else 0.01  # wd is not useful when we have enough data
 
-epoch_length_fixed = 2                     # make an 'epoch' very short, so we can see the training progress
+epoch_length_fixed = 5                     # make an 'epoch' very short, so we can see the training progress
 
 ######## special hyperparameters for RWKV model ########
 rwkv_emb_scale = 0.4                                # scale of initial embedding. 0.4 is a good choice
@@ -129,7 +129,7 @@ model = GPT(GPTConfig(train_dataset.vocab_size, train_dataset.ctx_len, model_typ
                 n_layer=n_layer, n_head=n_head, n_embd=n_embd, n_attn=n_attn, n_ffn=n_ffn))
 
 # load a trained model
-model.load_state_dict(torch.load(r'/kaggle/input/novel-small/trained-91.pth').state_dict())
+#model.load_state_dict(torch.load(r'/kaggle/input/novel-small/trained-91.pth').state_dict())
 
 print('model', model_type, 'epoch', n_epoch, 'batchsz', batch_size, 'betas', betas, 'eps', eps, 'wd', weight_decay, 'ctx', ctx_len, 'layer', n_layer, 'head', n_head, 'embd', n_embd, 'attn', n_attn, 'ffn', n_ffn)
 tconf = TrainerConfig(model_type=model_type, max_epochs=n_epoch, batch_size=batch_size, weight_decay=weight_decay,
