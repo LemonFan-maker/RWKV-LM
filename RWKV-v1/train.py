@@ -38,7 +38,7 @@ datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affect
 epoch_save_frequency = 10                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
-batch_size = 128                                      # if you see "CUDA out of memory", reduce this.
+batch_size = 1024                                      # if you see "CUDA out of memory", reduce this.
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
