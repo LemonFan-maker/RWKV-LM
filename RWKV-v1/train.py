@@ -38,7 +38,7 @@ datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affect
 epoch_save_frequency = 10                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
-batch_size = 2048                                      # if you see "CUDA out of memory", reduce this.
+batch_size = 256                                      # if you see "CUDA out of memory", reduce this.
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
@@ -62,7 +62,7 @@ betas = (0.9, 0.99) if model_type == 'RWKV' else (0.9, 0.99)
 eps = 4e-9
 weight_decay = 0 if model_type == 'RWKV' else 0.01  # wd is not useful when we have enough data
 
-epoch_length_fixed = 1000                     # make an 'epoch' very short, so we can see the training progress
+epoch_length_fixed = 10000                     # make an 'epoch' very short, so we can see the training progress
 
 ######## special hyperparameters for RWKV model ########
 rwkv_emb_scale = 0.4                                # scale of initial embedding. 0.4 is a good choice
