@@ -47,7 +47,7 @@ n_epoch = 128                                        # the 'epoch' here is actua
 
 model_level = 'character' # 'character' (recommended) or 'word'
 
-ctx_len = 1024 # context length, try 512 or 1024 if you have good GPU
+ctx_len = 512 # context length, try 512 or 1024 if you have good GPU
 n_layer = 6   # try 12 for 100M, 24 for 300M
 n_head = 8    # try 12 for 100M, 16 for 300M
 
