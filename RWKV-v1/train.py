@@ -43,7 +43,7 @@ batch_size = 38   #kaggle T4 *2 max
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
-n_epoch = 128                                        # the 'epoch' here is actually very short (and of fixed length)
+n_epoch = 56 #128                                        # the 'epoch' here is actually very short (and of fixed length)
 ########################################################################################
 
 model_level = 'character' # 'character' (recommended) or 'word'
