@@ -2,7 +2,7 @@
 # The RWKV Language Model - https://github.com/BlinkDL/RWKV-LM
 ########################################################################################################
 
-import os, sys, time, math, random, json, datetime, logging, wandb
+import os, sys, time, math, random, json, datetime, logging
 import numpy as np
 import torch
 from torch.utils.data import Dataset
