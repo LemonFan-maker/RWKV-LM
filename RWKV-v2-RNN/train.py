@@ -16,7 +16,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 ### Step 1: set training data ##########################################################################
 
-datafile = u"。。/dataI.txt"
+datafile = u"../dataI.txt"
 datafile_encoding = 'utf-8'
 # datafile_encoding = 'utf-16le'
 
