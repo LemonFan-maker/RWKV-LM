@@ -16,14 +16,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 ### Step 1: set training data ##########################################################################
 
-datafile = "enwik8"
+datafile = u"。。/dataI.txt"
 datafile_encoding = 'utf-8'
 # datafile_encoding = 'utf-16le'
 
 ### Step 2: set model size #############################################################################
 
-ctx_len = 1024        # ===> increase T_MAX in model.py if your ctx_len > 1024
-n_layer = 6
+ctx_len = 512        # ===> increase T_MAX in model.py if your ctx_len > 1024
+n_layer = 12
 n_embd = 512
 
 # 'RWKV' (better for char-level English) or 'RWKV-ffnPre' (better in some cases)
@@ -34,16 +34,16 @@ model_type = 'RWKV'
 # ===> batch_size must be divisible by B_GROUP_FORWARD and B_GROUP_BACKWARD in model.py
 # For example, if your batch_size = 20, you can set B_GROUP_FORWARD = 4, B_GROUP_BACKWARD = 2
 # If you see "CUDA out of memory", reduce it. Use GPU-Z to find the highest value for your VRAM.
-batch_size = 12
+batch_size = 38
 
 ### Step 4: set learning rate, training mini-epochs #######################################################
 
 lr_init = 6e-4
 lr_final = 1e-5
 # the mini-epoch is very short and of fixed length (ctx_len * epoch_length_fixed tokens)
-n_epoch = 500
+n_epoch = 512
 # 0 = never, 1 = every mini-epoch, 2 = every two mini-epochs, etc.
-epoch_save_frequency = 30
+epoch_save_frequency = 10
 epoch_save_path = 'trained-'
 
 epoch_length_fixed = 10000
