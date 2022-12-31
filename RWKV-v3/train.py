@@ -27,7 +27,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 ### Step 1: set training data ##########################################################################
 
-datafile = "../dataI.txt" # your data
+datafile = u"../dataI.txt" # your data
 datafile_encoding = 'utf-8'
 # datafile_encoding = 'utf-16le'
 
@@ -50,7 +50,7 @@ model_type = 'RWKV'
 # ---> batch_size must be divisible by B_GROUP_FORWARD and B_GROUP_BACKWARD in model.py
 # for example, if your batch_size = 20, you can set B_GROUP_FORWARD = 4, B_GROUP_BACKWARD = 2
 # if you see "CUDA out of memory", reduce batch_size. Use nvidia-smi to find the highest value for your GPU.
-batch_size = 4096
+batch_size = 64
 
 ### Step 4: set learning rate, number of mini-epochs #######################################################
 # By default we are using exponential LR decay.
@@ -68,7 +68,7 @@ lr_init = 8e-4 # we can use larger lr because of preLN
 lr_final = 1e-5
 
 # the mini-epoch is very short and of fixed length (length = ctx_len * epoch_length_fixed tokens)
-n_epoch = 100
+n_epoch = 120
 epoch_length_fixed = 10000
 
 # 0 = never, 1 = every mini-epoch, 2 = every two mini-epochs, ...
