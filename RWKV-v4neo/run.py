@@ -17,14 +17,15 @@ np.set_printoptions(precision=4, suppress=True, linewidth=200)
 args = types.SimpleNamespace()
 
 ########################################################################################################
-# Step 1: set model & config
-# Do this first: pip install torchdynamo
+# Step 1: set model & config (use v4 to run your trained-from-scratch models. v4 and v4neo are compatible)
 ########################################################################################################
 
-args.RUN_DEVICE = "cpu"  # 'cpu' (already very fast) // 'cuda'
-args.FLOAT_MODE = "fp32" # fp32 (good for cpu) // fp16 (might overflow) // bf16 (less accurate)
+args.RUN_DEVICE = "cuda" # 'cuda' // 'cpu' (already fast)
+args.FLOAT_MODE = "fp16" # fp16 (good for GPU, does not work for CPU) // fp32 (good for CPU) // bf16 (less accurate, but works for CPU)
+
 # if args.RUN_DEVICE == "cuda":
 #     os.environ["RWKV_RUN_BACKEND"] = 'nvfuser' # !!!BUGGY!!! wrong output
+os.environ["RWKV_JIT_ON"] = '1' # '1' or '0'. very useful for GPU/CPU fp32, but might be harmful for GPU fp16. please benchmark !!!
 
 TOKEN_MODE = "pile"
 WORD_NAME = [
@@ -85,27 +86,37 @@ context = "\nIn a shocking finding, scientist discovered a herd of dragons livin
 # context = "\n深圳是" # test Chinese
 # context = "\n東京は" # test Japanese
 
-###### A good prompt for chatbot ######
+# ###### A good prompt for Q&A ######
 # context = '''
-# The following is a conversation between a highly knowledgeable and intelligent AI assistant, called RWKV, and a human user, called User. In the following interactions, User and RWKV will converse in natural language, and RWKV will do its best to answer User’s questions. RWKV was built to be respectful, polite and inclusive. It knows a lot, and always tells the truth. The conversation begins.
+# Questions & Helpful Answers
+# Ask Research Experts
+# Question:
+# Can penguins fly?
 
-# User: OK RWKV, I’m going to start by quizzing you with a few warm-up questions. Who is currently the president of the USA?
+# Full Answer:
+# '''
 
-# RWKV: It’s Joe Biden; he was sworn in earlier this year.
+# ###### A good prompt for chatbot ######
+# context = '''
+# The following is a conversation between a highly knowledgeable and intelligent AI assistant called Bot, and a human user called User. In the following interactions, User and Bot converse in natural language, and Bot always answer User's questions. Bot is very smart, polite and humorous. Bot knows a lot, and always tells the truth. The conversation begins.
 
-# User: What year was the French Revolution?
+# User: who is president of usa?
 
-# RWKV: It started in 1789, but it lasted 10 years until 1799.
+# Bot: It’s Joe Biden; he was sworn in earlier this year.
 
-# User: Can you guess who I might want to marry?
+# User: french revolution what year
 
-# RWKV: Only if you tell me more about yourself - what are your interests?
+# Bot: It started in 1789, but it lasted 10 years until 1799.
 
-# User: Aha, I’m going to refrain from that for now. Now for a science question. What can you tell me about the Large Hadron Collider (LHC)?
+# User: guess i marry who ?
 
-# RWKV: It’s a large and very expensive piece of science equipment. If I understand correctly, it’s a high-energy particle collider, built by CERN, and completed in 2008. They used it to confirm the existence of the Higgs boson in 2012.
+# Bot: Only if you tell me more about yourself - what are your interests?
 
-# User:'''
+# User: wat is lhc
+
+# Bot: It’s a large and very expensive piece of science equipment. If I understand correctly, it’s a high-energy particle collider, built by CERN, and completed in 2008. They used it to confirm the existence of the Higgs boson in 2012.
+
+# User:''' # type your question here
 
 NUM_TRIALS = 999
 LENGTH_PER_TRIAL = 333
@@ -213,7 +224,7 @@ for TRIAL in range(1 if DEBUG_DEBUG else NUM_TRIALS):
             print(char, end="", flush=True)
         else:
             char = tokenizer.tokenizer.decode(ctx[out_last:])
-            if '\ufffd' not in char:
+            if '\ufffd' not in char: # is valid utf8 string?
                 print(char, end="", flush=True)
                 out_last = i+1
 

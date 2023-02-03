@@ -108,23 +108,22 @@ class RWKV_TimeMix(MyModule):
         self.layer_id = layer_id
         self.ctx_len = args.ctx_len
         self.n_embd = args.n_embd
-
-        attn_sz = args.n_embd
+        self.my_testing = self.args.my_testing
 
         with torch.no_grad():  # fancy init
             ratio_0_to_1 = layer_id / (args.n_layer - 1)  # 0 to 1
             ratio_1_to_almost0 = 1.0 - (layer_id / args.n_layer)  # 1 to ~0
 
             # fancy time_decay
-            decay_speed = torch.ones(attn_sz)
-            for h in range(attn_sz):
-                decay_speed[h] = -5 + 8 * (h / (attn_sz - 1)) ** (0.7 + 1.3 * ratio_0_to_1)
+            decay_speed = torch.ones(args.dim_att)
+            for h in range(args.dim_att):
+                decay_speed[h] = -5 + 8 * (h / (args.dim_att - 1)) ** (0.7 + 1.3 * ratio_0_to_1)
             self.time_decay = nn.Parameter(decay_speed)
             # print(layer_id, self.time_decay.flatten()[:3].cpu().numpy(), '...', self.time_decay.flatten()[-3:].cpu().numpy())
 
             # fancy time_first
-            zigzag = torch.tensor([(i + 1) % 3 - 1 for i in range(attn_sz)]) * 0.5
-            self.time_first = nn.Parameter(torch.ones(attn_sz) * math.log(0.3) + zigzag)
+            zigzag = torch.tensor([(i + 1) % 3 - 1 for i in range(args.dim_att)]) * 0.5
+            self.time_first = nn.Parameter(torch.ones(args.dim_att) * math.log(0.3) + zigzag)
 
             # fancy time_mix
             x = torch.ones(1, 1, args.n_embd)
@@ -135,46 +134,96 @@ class RWKV_TimeMix(MyModule):
             self.time_mix_r = nn.Parameter(torch.pow(x, 0.5 * ratio_1_to_almost0))
 
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
+        self.key = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        self.value = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        self.receptance = nn.Linear(args.n_embd, args.dim_att, bias=False)
+        self.output = nn.Linear(args.dim_att, args.n_embd, bias=False)
 
-        self.key = nn.Linear(args.n_embd, attn_sz, bias=False)
-        self.value = nn.Linear(args.n_embd, attn_sz, bias=False)
-        self.receptance = nn.Linear(args.n_embd, attn_sz, bias=False)
+        if 'a' in os.environ["RWKV_MY_TESTING"]:
+            self.register_buffer("att_mask", torch.tril(torch.ones(args.ctx_len, args.ctx_len)))
+            d_qkv = args.n_embd // 16
+            self.qq = nn.Linear(args.n_embd, d_qkv, bias=False)
+            self.kk = nn.Linear(args.n_embd, d_qkv, bias=False)
+            self.vv = nn.Linear(args.n_embd, d_qkv, bias=False)
+            self.oo = nn.Linear(d_qkv, args.n_embd, bias=False)
+            with torch.no_grad():
+                x = torch.ones(1, 1, args.n_embd)
+                for i in range(args.n_embd):
+                    x[0, 0, i] = i / args.n_embd
+                self.time_mix_qq = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
+                self.time_mix_kk = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
+                self.time_mix_vv = nn.Parameter(torch.pow(x, ratio_1_to_almost0) + 0.3 * ratio_0_to_1)
 
-        self.output = nn.Linear(attn_sz, args.n_embd, bias=False)
+    if 'a' not in os.environ["RWKV_MY_TESTING"]:
+        @MyFunction
+        def jit_func(self, x):
 
-    @MyFunction
-    def jit_func(self, x):
+            # Mix x with the previous timestep to produce xk, xv, xr
+            xx = self.time_shift(x)
+            xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
+            xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
+            xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
 
-        # Mix x with the previous timestep to produce xk, xv, xr
-        xx = self.time_shift(x)
-        xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
-        xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
-        xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
+            # Use xk, xv, xr to produce k, v, r
+            k = self.key(xk)
+            v = self.value(xv)
+            r = self.receptance(xr)
+            sr = torch.sigmoid(r)
+            return sr, k, v
 
-        # Use xk, xv, xr to produce k, v, r
-        k = self.key(xk)
-        v = self.value(xv)
-        r = self.receptance(xr)
-        sr = torch.sigmoid(r)
+        def forward(self, x):
+            B, T, C = x.size()  # x = (Batch,Time,Channel)
+            sr, k, v = self.jit_func(x)
+            rwkv = sr * RUN_CUDA(B, T, self.args.dim_att, self.time_decay, self.time_first, k, v)
+            return self.output(rwkv)
 
-        return sr, k, v
+    if 'a' in os.environ["RWKV_MY_TESTING"]:
+        @MyFunction
+        def QKV(self, q, k, v):
+            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+            att = att.masked_fill(self.att_mask == 0, float('-inf'))
+            att = F.softmax(att, dim = -1)
+            x = att @ v
+            return x
 
-    def forward(self, x):
-        B, T, C = x.size()  # x = (Batch,Time,Channel)
+        @MyFunction
+        def jit_funcQKV(self, x):
+            # Mix x with the previous timestep to produce xk, xv, xr
+            xx = self.time_shift(x)
+            xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
+            xv = x * self.time_mix_v + xx * (1 - self.time_mix_v)
+            xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
+            xqq = x * self.time_mix_qq + xx * (1 - self.time_mix_qq)
+            xkk = x * self.time_mix_kk + xx * (1 - self.time_mix_kk)
+            xvv = x * self.time_mix_vv + xx * (1 - self.time_mix_vv)
 
-        sr, k, v = self.jit_func(x)
+            # Use xk, xv, xr to produce k, v, r
+            k = self.key(xk)
+            v = self.value(xv)
+            r = self.receptance(xr)
+            sr = torch.sigmoid(r)
+            
+            qq = self.qq(xqq)
+            kk = self.kk(xkk)
+            vv = self.vv(xvv)
 
-        rwkv = sr * RUN_CUDA(B, T, C, self.time_decay, self.time_first, k, v)
-        rwkv = self.output(rwkv)
-        return rwkv
+            return sr, k, v, qq, kk, vv
 
+        def forward(self, x):
+            B, T, C = x.size()  # x = (Batch,Time,Channel)
+            sr, k, v, qq, kk, vv = self.jit_funcQKV(x)
+            rwkv = sr * RUN_CUDA(B, T, self.args.dim_att, self.time_decay, self.time_first, k, v)
+            rwkv = self.output(rwkv) + self.oo(self.QKV(qq, kk, vv))
+            return rwkv
+
+########################################################################################################
 
 class RWKV_ChannelMix(MyModule):
     def __init__(self, args, layer_id):
         super().__init__()
         self.args = args
         self.layer_id = layer_id
-
+        self.my_testing = self.args.my_testing
         self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
 
         with torch.no_grad():  # fancy init of time_mix
@@ -187,24 +236,49 @@ class RWKV_ChannelMix(MyModule):
             self.time_mix_k = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
             self.time_mix_r = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
 
-        hidden_sz = 4 * args.n_embd
-        self.key = nn.Linear(args.n_embd, hidden_sz, bias=False)
+        self.key = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
         self.receptance = nn.Linear(args.n_embd, args.n_embd, bias=False)
-        self.value = nn.Linear(hidden_sz, args.n_embd, bias=False)
+        self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
 
     @MyFunction
     def forward(self, x):
         xx = self.time_shift(x)
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)
         xr = x * self.time_mix_r + xx * (1 - self.time_mix_r)
-
         k = self.key(xk)
         k = torch.square(torch.relu(k))
         kv = self.value(k)
+        return torch.sigmoid(self.receptance(xr)) * kv
 
-        rkv = torch.sigmoid(self.receptance(xr)) * kv
-        return rkv
+class MishGLU(MyModule):
+    def __init__(self, args, layer_id):
+        super().__init__()
+        self.args = args
+        self.layer_id = layer_id
+        self.my_testing = self.args.my_testing
+        self.time_shift = nn.ZeroPad2d((0, 0, 1, -1))
 
+        with torch.no_grad():
+            ratio_1_to_almost0 = 1.0 - (layer_id / args.n_layer)
+
+            x = torch.ones(1, 1, args.n_embd)
+            for i in range(args.n_embd):
+                x[0, 0, i] = i / args.n_embd
+
+            self.time_mix_k = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
+            self.time_mix_r = nn.Parameter(torch.pow(x, ratio_1_to_almost0))
+            self.aa = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
+            self.bb = nn.Linear(args.n_embd, args.dim_ffn, bias=False)
+            self.value = nn.Linear(args.dim_ffn, args.n_embd, bias=False)
+
+    @MyFunction
+    def forward(self, x):
+        xx = self.time_shift(x)
+        xa = x * self.time_mix_k + xx * (1 - self.time_mix_k)
+        xb = x * self.time_mix_r + xx * (1 - self.time_mix_r)
+        a = self.aa(xa)
+        b = self.bb(xb)
+        return self.value(a * F.mish(b))
 
 ########################################################################################################
 # The RWKV Model with our blocks
@@ -231,7 +305,10 @@ class Block(nn.Module):
         else:
             self.att = RWKV_TimeMix(args, layer_id)
 
-        self.ffn = RWKV_ChannelMix(args, layer_id)
+        if 'g' in os.environ["RWKV_MY_TESTING"]:
+            self.ffn = MishGLU(args, layer_id)
+        else:
+            self.ffn = RWKV_ChannelMix(args, layer_id)
         
         if args.tiny_att_dim > 0 and self.layer_id == args.tiny_att_layer:
             self.tiny_ln = nn.LayerNorm(args.n_embd)
@@ -401,9 +478,38 @@ class RWKV(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         args = self.args
-        idx, targets = batch
-        logits = self(idx)
-        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+        if args.my_qa_mask == 0:
+            idx, targets = batch
+            logits = self(idx)
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+        else:
+            idx, targets, mask = batch
+            mask = mask.view(-1)
+            sum_mask = torch.sum(mask).item()
+            # if sum_mask == 0:
+            #     return torch.tensor([0.0], requires_grad=True)
+
+            logits = self(idx)
+            if sum_mask == mask.shape[0]:
+                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+                # print('rank', self.global_rank, 'loss', loss.item())
+            else:
+                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), reduction='none')
+                # loss_raw = loss
+                loss = torch.sum(loss * mask) / sum_mask
+
+                # torch.set_printoptions(threshold=10000)
+                # if True: #self.global_rank == 1:
+                #     tmp = ''
+                #     sss = 0
+                #     ccc = 0
+                #     for i in range(mask.shape[0]):
+                #         if mask[i] > 0:
+                #             tmp += str(idx.view(-1)[i].item()) + ','
+                #             sss += loss_raw.view(-1)[i].float().item()
+                #             ccc += 1
+                #     print('rank', self.global_rank, 'loss', loss.item(), 'lavg', sss / ccc)#, 'tmp', tmp, 'input', idx)
+
         return L2Wrap.apply(loss, logits)
 
     def training_step_end(self, batch_parts):
@@ -428,7 +534,7 @@ class RWKV(pl.LightningModule):
 
             gain = 1.0
             scale = 1.0
-            if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n:
+            if "ln_" in n or ".ln" in n or "time_" in n or "_mask" in n or "pos_emb" in n or '.mask.' in n:
                 m[n] = p
             else:
                 if n == "emb.weight":
@@ -436,7 +542,7 @@ class RWKV(pl.LightningModule):
                 else:
                     if shape[0] > shape[1]:
                         gain = math.sqrt(shape[0] / shape[1])
-                    for kk in [".att.key.", ".att.receptance.", ".att.output.", ".att.key.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q."]:
+                    for kk in [".att.key.", ".att.receptance.", ".att.output.", ".att.key.", ".ffn.value.", ".ffn.receptance.", ".ffnPre.value.", ".ffnPre.receptance.", "head_q.", '.oo.', '.rr.']:
                         if kk in n:
                             scale = 0
                     if n == "head.weight":

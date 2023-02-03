@@ -1,10 +1,24 @@
-# The RWKV Language Model (and my tricks for LMs)
+# The RWKV Language Model (and my LM tricks)
 
 ## RWKV: RNN with Transformer-level LLM Performance
 
-RWKV is a RNN with Transformer-level LLM performance, which can also be directly trained like a GPT transformer (parallelizable). And it's attention-free. You only need the hidden state at position t to compute the state at position t+1. You can use the "GPT" mode to quickly computer the hidden state for the "RNN" mode.
+RWKV is a RNN with Transformer-level LLM performance, which can also be directly trained like a GPT transformer (parallelizable). And it's 100% attention-free. You only need the hidden state at position t to compute the state at position t+1. You can use the "GPT" mode to quickly computer the hidden state for the "RNN" mode.
 
 So it's combining the best of RNN and transformer - **great performance, fast inference, saves VRAM, fast training, "infinite" ctx_len, and free sentence embedding** (using the final hidden state).
+
+**Download RWKV-4 0.1/0.4/1.5/3/7/14B weights**: https://huggingface.co/BlinkDL
+
+**RWKV chatbot**: https://github.com/BlinkDL/ChatRWKV
+
+![RWKV-chat](RWKV-chat.png)
+
+**You can run RWKV on low VRAM GPUs with this fork (choose pytorch-stream):** https://github.com/harrisonvanderbyl/rwkv_chatbot
+
+---
+
+I am training RWKV-4 14B on the Pile (final release around Feb-15-2023): https://wandb.ai/blinkdl/RWKV-v4-Pile
+
+![RWKV-eval2](RWKV-eval2.png)
 
 RWKV-3 1.5B on A40 (tf32) = always 0.015 sec/token, tested using simple pytorch code (no CUDA), GPU utilization 45%, VRAM 7823M
 
@@ -14,15 +28,14 @@ Training speed: RWKV-4 1.5B BF16 ctxlen1024 = 106K tokens/s on 8xA100 40G.
 
 I am doing image experiments too (For example: https://huggingface.co/BlinkDL/clip-guided-binary-autoencoder) and RWKV will be able to do txt2img diffusion :) My idea: 256x256 rgb image -> 32x32x13bit latents -> apply RWKV to compute transition probability for each of the 32x32 grid -> pretend the grids are independent and "diffuse" using these probabilities.
 
+Smooth training - no loss spikes! (lr & bsz change around 15G tokens)
+![RWKV-loss](RWKV-loss.png)
+
 ## Join our Discord: https://discord.gg/bDSBUMeFpc :)
 
 You are welcome to join the RWKV discord https://discord.gg/bDSBUMeFpc to build upon it. We have plenty of potential compute (A100 40Gs) now (thanks to Stability and EleutherAI), so if you have interesting ideas I can run them.
 
 Twitter: https://twitter.com/BlinkDL_AI
-
-**Download RWKV-4 0.1/0.4/1.5/3/7/14B weights**: https://huggingface.co/BlinkDL
-
-I am training RWKV-4 14B on the Pile: https://wandb.ai/blinkdl/RWKV-v4-Pile
 
 ![RWKV-eval](RWKV-eval.png)
 
@@ -31,6 +44,8 @@ All of the trained models will be open-source. Inference is very fast (only matr
 How it works: RWKV gathers information to a number of channels, which are also decaying with different speeds as you move to the next token. It's very simple once you understand it.
 
 **RWKV is parallelizable because the time-decay of each channel is data-independent (and trainable)**. For example, in usual RNN you can adjust the time-decay of a channel from say 0.8 to 0.5 (these are called "gates"), while in RWKV you simply move the information from a W-0.8-channel to a W-0.5-channel to achieve the same effect. Moreover, you can fine-tune RWKV into a non-parallelizable RNN (then you can use outputs of later layers of the previous token) if you want extra performance.
+
+![RWKV-formula](RWKV-formula.png)
 
 Here are some of my TODOs. Let's work together :)
 
@@ -52,9 +67,70 @@ You can find me (BlinkDL) in the EleutherAI Discord too: https://www.eleuther.ai
 
 ![RWKV-demo](RWKV-demo.png)
 
+## New ideas (just to record some new ideas)
+
+I have an idea to improve tokenization. We can hardcode some channels to have meanings. Example:
+
+Channel 0 = "space"
+
+Channel 1 = "capitalize first letter"
+
+Channel 2 = "capitalize all letters"
+
+Therefore:
+
+Embedding of "abc":  [0, 0, 0, x0, x1, x2 , ..]
+
+Embedding of " abc":  [1, 0, 0, x0, x1, x2, ..]
+
+Embedding of " Abc":  [1, 1, 0, x0, x1, x2, ..]
+
+Embedding of "ABC": [0, 0, 1, x0, x1, x2, ...]
+
+......
+
+so they will share most of the embedding. And we can rapidly compute the output probability of all variations of "abc".
+
+Note: the above method is assuming that p(" xyz") / p("xyz") is the same for any "xyz", which can be wrong.
+
+Better: define emb_space emb_capitalize_first emb_capitalize_all to be a function of emb.
+
+Maybe the Best: let 'abc' ' abc' etc. to share the last 90% of their embeddings.
+
+At this moment, all our tokenizers spend too many items to represent all variations of 'abc' ' abc' ' Abc' etc. Moreover the model cannot discover that these are actually similar if some of these variations are rare in the dataset. My method can solve this. I plan to test this in a new version of RWKV.
+
 ## Quick start
 
-Use https://github.com/BlinkDL/RWKV-LM/tree/main/RWKV-v4 or https://github.com/BlinkDL/RWKV-LM/tree/main/RWKV-v4neo (latest code).
+Use https://github.com/BlinkDL/RWKV-LM/tree/main/RWKV-v4neo (latest code, compatible with v4).
+
+Here is a great prompt for testing Q&A of LLMs. Works for any model: (found by minimizing ChatGPT ppls for RWKV 1.5B)
+```python
+prompt = f'\nQ & A\n\nQuestion:\n{qq}\n\nDetailed Expert Answer:\n' # let the model generate after this
+```
+
+**Cool Community RWKV Projects (check them!)**:
+
+https://pypi.org/project/rwkvstic/
+
+https://github.com/harrisonvanderbyl/rwkv_chatbot
+
+https://github.com/mrsteyk/RWKV-LM-deepspeed
+
+https://github.com/huggingface/transformers/issues/17230
+
+https://github.com/ArEnSc/Production-RWKV
+
+https://github.com/nlpodyssey/verbaflow (in Go)
+
+https://github.com/nlpodyssey/rwkv (in Go)
+
+https://github.com/resloved/RWKV-notebooks
+
+https://github.com/Pathos14489/RWKVDistributedInference
+
+https://github.com/AXKuhta/rwkv-onnx-dml
+
+https://github.com/josephrocca/rwkv-v4-web
 
 ### Inference
 
@@ -66,21 +142,29 @@ Run RWKV-4 Pile models in your browser (and onnx version): see this issue https:
 
 RWKV-4 Web Demo: https://josephrocca.github.io/rwkv-v4-web/demo/ (note: only greedy sampling for now)
 
-More resources:
-
-https://github.com/huggingface/transformers/issues/17230
-
-https://github.com/ArEnSc/Production-RWKV
-
-https://github.com/harrisonvanderbyl/rwkv_chatbot
-
-https://github.com/Pathos14489/RWKVDistributedInference
-
-https://github.com/AXKuhta/rwkv-onnx-dml
-
-https://github.com/josephrocca/rwkv-v4-web
-
 For the old RWKV-2: see the release here for a 27M params model on enwik8 with 0.72 BPC(dev). Run run.py in https://github.com/BlinkDL/RWKV-LM/tree/main/RWKV-v2-RNN. You can even run it in your browser: https://github.com/BlinkDL/AI-Writer/tree/main/docs/eng https://blinkdl.github.io/AI-Writer/eng/ (this is using tf.js WASM single-thread mode).
+
+I'd like to build an almost-INT8 version of RWKV. A simple method to quantize a matrix with outliers:
+```python
+import numpy as npA
+
+# the original M, with outliers
+M = np.array([[1,   2,   1,  2],[2,  100,    2, 10],[1,   2,   1, 2],[2,   1, 20, 1]])
+
+# the scaled M, without outliers
+Q = np.array([[1, 0.2, 0.1,  2],[0.4,  2, 0.04, 2], [1, 0.2, 0.1, 2],[2, 0.1,  2, 1]])
+# we can find optimal a & b to minimize inference error after quantization
+a = np.array([1, 10, 10, 1])
+b = np.array([1, 5, 1, 1])
+
+# test M.v with random v - the results will be the same
+v = np.array([1.23, 5.44, 9.75, 2.98])
+print(M.dot(v))
+print(Q.dot(v * a) * b)
+
+# even better: decompose M.dot(v) as Q.dot(v * a + aa) * b + bb where aa & bb are vectors too
+# and can apply more scaling to achieve W8A8 (example: https://arxiv.org/pdf/2211.10438.pdf)
+```
 
 ### Training / Fine-tuning
 
@@ -93,6 +177,22 @@ You will be training the "GPT" version because it's paralleziable and faster to 
 Read the inference code in src/model.py and try using the final hidden state（.xx .aa .bb) as a faithful sentence embedding for other tasks. Probably you shall begin with .xx and .aa/.bb (.aa divided by .bb).
 
 Colab for fine-tuning RWKV-4 Pile models: https://colab.research.google.com/github/resloved/RWKV-notebooks/blob/master/RWKV_v4_RNN_Pile_Fine_Tuning.ipynb
+
+**Large corpus:** Use https://github.com/EleutherAI/gpt-neox to convert .jsonl into .bin and .idx
+```
+python tools/preprocess_data.py --input ./my_data.jsonl --output-prefix ./data/my_data --vocab ./20B_tokenizer.json --dataset-impl mmap --tokenizer-type HFTokenizer --append-eod
+```
+The jsonl format sample (one line for each document):
+```
+{"meta": {"ID": 101}, "text": "This is the first document."}
+{"meta": {"ID": 102}, "text": "Hello\nWorld"}
+{"meta": {"ID": 103}, "text": "1+1=2\n1+2=3\n2+2=4"}
+```
+generated by code like this:
+```
+ss = json.dumps({"meta": meta, "text": text}, ensure_ascii=False)
+out.write(ss + "\n")
+```
 
 ## How it works
 
