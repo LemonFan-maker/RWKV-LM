@@ -32,13 +32,13 @@ datafile_encoding = 'utf-8'
 # datafile = u"V:\\NLP\\simplebooks-shift-utf32.word"
 # datafile_encoding = 'utf-32'
 
-datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
+datafile_type = 0 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
 
 #################################### VERY IMPORTANT ####################################
 epoch_save_frequency = 20                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
-batch_size = 30   #kaggle T4 *2 max
+batch_size =  24  #kaggle T4 *2 max
                                                      # if you see "CUDA out of memory", reduce this.
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
@@ -50,7 +50,7 @@ model_level = 'character' # 'character' (recommended) or 'word'
 
 ctx_len = 512 # context length, try 512 or 1024 if you have good GPU
 n_layer = 12   # try 12 for 100M, 24 for 300M
-n_head = 14    # try 12 for 100M, 16 for 300M
+n_head = 12  # try 12 for 100M, 16 for 300M
 
 n_embd = n_head * 64
 n_attn = n_embd
