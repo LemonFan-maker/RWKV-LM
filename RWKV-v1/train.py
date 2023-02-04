@@ -22,7 +22,7 @@ model_type = 'RWKV'
 
 # datafile = u"V:\\NLP\\text8"
 # datafile = u"V:\\NLP\\enwik8"
-datafile = u"../dataI.txt"
+datafile = u"all.txt"
 datafile_encoding = 'utf-8'
 # datafile = u"D:\\NLP-Data\\ww100M.txt"
 # datafile = u"D:\\NLP-Data\\__2019.txt"
@@ -32,10 +32,10 @@ datafile_encoding = 'utf-8'
 # datafile = u"V:\\NLP\\simplebooks-shift-utf32.word"
 # datafile_encoding = 'utf-32'
 
-datafile_type = 0 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
+datafile_type = 1 # use 0 for char-level english. use 1 for chinese. only affects some RWKV hyperparametrs 
 
 #################################### VERY IMPORTANT ####################################
-epoch_save_frequency = 8                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
+epoch_save_frequency = 20                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
 batch_size = 36   #kaggle T4 *2 max
@@ -43,7 +43,7 @@ batch_size = 36   #kaggle T4 *2 max
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
 
-n_epoch = 512 #128                                        # the 'epoch' here is actually very short (and of fixed length)
+n_epoch = 600 #128                                        # the 'epoch' here is actually very short (and of fixed length)
 ########################################################################################
 
 model_level = 'character' # 'character' (recommended) or 'word'
