@@ -33,7 +33,7 @@ EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-169M'
 
 ########################################################################################################
 
-datafile = "../data/enwik8" # your data
+datafile = "all.txt" # your data
 datafile_encoding = 'utf-8' # 'utf-8' / 'utf-16le' / 'numpy' (for fine-tuning pile models) / 'binidx' (the Megatron-LM 'binidx' format)
 
 # datafile = 'my-gpt_seq_document'
@@ -58,7 +58,7 @@ if EXPRESS_PILE_MODE:
 # 2) set RWKV_NUM_GPUS = '8' (or your #GPU), batch_size = single_gpu_batchsz * RWKV_NUM_GPUS,
 #    EPOCH_BEGIN = 1, LOAD_MODEL = True, and it will load 'trained-1.pth' and continue the training from it
 #
-os.environ['RWKV_NUM_GPUS'] = '1' # num of GPUs to use
+os.environ['RWKV_NUM_GPUS'] = '2' # num of GPUs to use
 
 #
 # 'bf16' (fast & stable)
@@ -132,7 +132,7 @@ n_epoch = 500
 epoch_length_fixed = (10000 // batch_size) * batch_size # feel free to increase it if you have lots of GPU
 
 # epoch_save_frequency 0 = never, 1 = every mini-epoch, 2 = every two mini-epochs, ...
-epoch_save_frequency = 10
+epoch_save_frequency = 20
 epoch_save_path = 'trained-'
 
 if EXPRESS_PILE_MODE:
