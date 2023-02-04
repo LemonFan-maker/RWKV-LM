@@ -38,7 +38,7 @@ datafile_type = 0 # use 0 for char-level english. use 1 for chinese. only affect
 epoch_save_frequency = 20                            # 0 = never, 1 = every 'epoch', 2 = every two 'epoch', etc.
 epoch_save_path = 'trained-'
 
-batch_size =  24  #kaggle T4 *2 max
+batch_size =  26  #kaggle T4 *2 max
                                                      # if you see "CUDA out of memory", reduce this.
                                                      # if you have good GPU, increase this.
                                                      # use GPU-Z to find the highest value for your VRAM.
