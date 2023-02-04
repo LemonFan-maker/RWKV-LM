@@ -16,7 +16,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 ### Step 1: set training data ##########################################################################
 
-datafile = u"../dataI.txt"
+datafile = u"all.txt"
 datafile_encoding = 'utf-8'
 # datafile_encoding = 'utf-16le'
 
@@ -38,12 +38,12 @@ batch_size = 32
 
 ### Step 4: set learning rate, training mini-epochs #######################################################
 
-lr_init = 6e-4
+lr_init = 8e-4
 lr_final = 1e-5
 # the mini-epoch is very short and of fixed length (ctx_len * epoch_length_fixed tokens)
-n_epoch = 512
+n_epoch = 60
 # 0 = never, 1 = every mini-epoch, 2 = every two mini-epochs, etc.
-epoch_save_frequency = 10
+epoch_save_frequency = 20
 epoch_save_path = 'trained-'
 
 epoch_length_fixed = 10000
