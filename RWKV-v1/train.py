@@ -21,7 +21,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 model_type = 'RWKV'
 
 # datafile = u"V:\\NLP\\text8"
-datafile = u"all_clean.txt"
+#datafile = u"all_clean.txt"
 datafile = u"all.txt"
 datafile_encoding = 'utf-8'
 # datafile = u"D:\\NLP-Data\\ww100M.txt"
